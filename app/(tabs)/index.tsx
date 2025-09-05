@@ -1,75 +1,147 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet, View } from "react-native";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { Picker } from "@react-native-picker/picker";
+import { useState } from "react";
+import { useSharedValue } from "react-native-reanimated";
+import ColorPicker, {
+  ColorFormatsObject,
+  HueSlider,
+  OpacitySlider,
+  Panel1,
+  Swatches,
+} from "reanimated-color-picker";
+
+const LEDModes: string[] = ["solid", "off"];
+const customSwatches: string[] = [
+  "#ff00ff",
+  "#ff0000",
+  "#00ff00",
+  "#0000ff",
+  "#ffffff",
+  "#ffff00",
+];
 
 export default function HomeScreen() {
+  const [selectedMode, setSelectedMode] = useState<string>("");
+  const [resultColor, setResultColor] = useState(customSwatches[0]);
+  const currentColor = useSharedValue(customSwatches[0]);
+
+  const onColorChange = (color: ColorFormatsObject) => {
+    "worklet";
+    currentColor.value = color.hex;
+  };
+
+  const onColorPick = (color: ColorFormatsObject) => {
+    setResultColor(color.hex);
+  };
+
+  const handleModeChange = (value: string) => {
+    console.log(value);
+    setSelectedMode(value);
+  };
+
+  const handleAPIcall = () => {};
+
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
+      headerBackgroundColor={{
+        light: currentColor,
+        dark: currentColor,
+      }}>
+      {/* TITLE */}
+      {/* <ThemedView style={styles.titleContainer}>
+        <ThemedText type="title">LED control</ThemedText>
+      </ThemedView> */}
+
+      <View>
+        <Picker selectedValue={selectedMode} onValueChange={handleModeChange}>
+          {LEDModes.map((mode) => (
+            <Picker.Item label={mode} value={mode} key={mode} />
+          ))}
+        </Picker>
+      </View>
+      <View>
+        {/* <ThemedText>Selected Color: {currentColor}</ThemedText> */}
+
+        <ColorPicker
+          value={resultColor}
+          sliderThickness={25}
+          thumbSize={24}
+          thumbShape="circle"
+          onChange={onColorChange}
+          onCompleteJS={onColorPick}
+          style={styles.picker}
+          boundedThumb>
+          <Panel1 style={styles.panelStyle} />
+          <HueSlider style={styles.sliderStyle} />
+          <OpacitySlider style={styles.sliderStyle} />
+
+          <Swatches
+            style={styles.swatchesContainer}
+            swatchStyle={styles.swatchStyle}
+            colors={customSwatches}
+          />
+
+          {/* <PreviewText style={styles.previewTxt} colorFormat="hwba" /> */}
+        </ColorPicker>
+      </View>
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  title: {
+    textAlign: "center",
+    fontFamily: "Quicksand",
+    fontWeight: "bold",
+    marginVertical: 20,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  picker: {
+    gap: 20,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  panelStyle: {
+    borderRadius: 16,
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+
+    elevation: 5,
+  },
+  sliderStyle: {
+    borderRadius: 20,
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+
+    elevation: 5,
+  },
+  previewTxt: {
+    color: "#707070",
+    fontFamily: "Quicksand",
+  },
+  swatchesContainer: {
+    alignItems: "center",
+    flexWrap: "nowrap",
+    gap: 10,
+  },
+  swatchStyle: {
+    borderRadius: 20,
+    height: 30,
+    width: 30,
+    margin: 0,
+    marginBottom: 0,
+    marginHorizontal: 0,
+    marginVertical: 0,
   },
 });
