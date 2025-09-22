@@ -1,8 +1,8 @@
-import { StyleSheet, View } from "react-native";
+import { Button, StyleSheet, Text, View } from "react-native";
 
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { Picker } from "@react-native-picker/picker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSharedValue } from "react-native-reanimated";
 import ColorPicker, {
   ColorFormatsObject,
@@ -11,6 +11,12 @@ import ColorPicker, {
   Panel1,
   Swatches,
 } from "reanimated-color-picker";
+
+interface Config {
+  brightness: number;
+  color: string;
+  mode: string;
+}
 
 const LEDModes: string[] = ["solid", "off"];
 const customSwatches: string[] = [
@@ -23,12 +29,29 @@ const customSwatches: string[] = [
 ];
 
 export default function HomeScreen() {
-  const [selectedMode, setSelectedMode] = useState<string>("");
-  const [resultColor, setResultColor] = useState(customSwatches[0]);
-  const currentColor = useSharedValue(customSwatches[0]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [currentConfig, setCurrentConfig] = useState<Config>();
+  const [selectedMode, setSelectedMode] = useState<string>("solid");
+  const [resultColor, setResultColor] = useState<string>(customSwatches[0]);
+  const [brightness, setBrightness] = useState<number>(100);
+  const [error, setError] = useState<any>();
+  const currentColor = useSharedValue(resultColor);
+
+  const setValues = (data: Config) => {
+    currentColor.value = data.color;
+    console.log("data.color", data.color || data.color);
+
+    setCurrentConfig(data);
+    setSelectedMode(data.mode);
+    setResultColor(data.color);
+    setBrightness(data.brightness);
+    setLoading(false);
+  };
 
   const onColorChange = (color: ColorFormatsObject) => {
     "worklet";
+    console.log(color.hex);
+
     currentColor.value = color.hex;
   };
 
@@ -41,7 +64,50 @@ export default function HomeScreen() {
     setSelectedMode(value);
   };
 
-  const handleAPIcall = () => {};
+  const handleAPIcall = async () => {
+    setLoading(true);
+    console.log("handleapicall");
+    console.log(selectedMode, resultColor, brightness);
+
+    try {
+      const res = await fetch("http://192.168.100.12:5000/api", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: selectedMode,
+          color: resultColor,
+          brightness: brightness,
+        }),
+        headers: {
+          "Content-type": "application/json",
+        },
+      });
+      const data = await res.json();
+      if (data) {
+        console.log(data);
+        setValues(data.received);
+      }
+    } catch (error) {
+      console.log(error);
+      setLoading(false);
+      return;
+    }
+  };
+
+  useEffect(() => {
+    const fetchInitial = async () => {
+      try {
+        const res = await fetch("http://192.168.100.12:5000/api");
+        const data = await res.json();
+        if (data) {
+          console.log(data);
+          setValues(data);
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    fetchInitial();
+  }, []);
 
   return (
     <ParallaxScrollView
@@ -54,38 +120,49 @@ export default function HomeScreen() {
         <ThemedText type="title">LED control</ThemedText>
       </ThemedView> */}
 
-      <View>
-        <Picker selectedValue={selectedMode} onValueChange={handleModeChange}>
-          {LEDModes.map((mode) => (
-            <Picker.Item label={mode} value={mode} key={mode} />
-          ))}
-        </Picker>
-      </View>
-      <View>
-        {/* <ThemedText>Selected Color: {currentColor}</ThemedText> */}
+      {loading && (
+        <View>
+          <Text style={{ color: "white" }}>Loading...</Text>
+        </View>
+      )}
+      {!loading && (
+        <>
+          <Button title="Change colors" onPress={handleAPIcall} />
 
-        <ColorPicker
-          value={resultColor}
-          sliderThickness={25}
-          thumbSize={24}
-          thumbShape="circle"
-          onChange={onColorChange}
-          onCompleteJS={onColorPick}
-          style={styles.picker}
-          boundedThumb>
-          <Panel1 style={styles.panelStyle} />
-          <HueSlider style={styles.sliderStyle} />
-          <OpacitySlider style={styles.sliderStyle} />
+          <View>
+            <Picker
+              selectedValue={selectedMode}
+              onValueChange={handleModeChange}>
+              {LEDModes.map((mode) => (
+                <Picker.Item label={mode} value={mode} key={mode} />
+              ))}
+            </Picker>
+          </View>
+          <View>
+            <ColorPicker
+              value={resultColor}
+              sliderThickness={25}
+              thumbSize={24}
+              thumbShape="circle"
+              onChange={onColorChange}
+              onCompleteJS={onColorPick}
+              style={styles.picker}
+              boundedThumb>
+              <Panel1 style={styles.panelStyle} />
+              <HueSlider style={styles.sliderStyle} />
+              <OpacitySlider style={styles.sliderStyle} />
 
-          <Swatches
-            style={styles.swatchesContainer}
-            swatchStyle={styles.swatchStyle}
-            colors={customSwatches}
-          />
+              <Swatches
+                style={styles.swatchesContainer}
+                swatchStyle={styles.swatchStyle}
+                colors={customSwatches}
+              />
 
-          {/* <PreviewText style={styles.previewTxt} colorFormat="hwba" /> */}
-        </ColorPicker>
-      </View>
+              {/* <PreviewText style={styles.previewTxt} colorFormat="hwba" /> */}
+            </ColorPicker>
+          </View>
+        </>
+      )}
     </ParallaxScrollView>
   );
 }
